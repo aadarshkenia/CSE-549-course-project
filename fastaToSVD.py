@@ -1,6 +1,8 @@
 from Bio import SeqIO
+from datetime import datetime
 input_file = 'SuperRead/superReadSequences.fasta'
 
+# This function constructs the kmer-read matrix.
 def generateMatrix(kmerToReadMap,superReads):
 	matrix = []
 	sortedKeys = kmerToReadMap.keys()
@@ -12,10 +14,10 @@ def generateMatrix(kmerToReadMap,superReads):
 			row[value] = 1
 		matrix.append(row)
 	return matrix
-		
-			
-def prepareMatrix(superReads, kmerSize=3): 
-	
+
+# This function constructs unique-kmer(key) - read(value) pair from superreads.
+def prepareMatrix(superReads, kmerSize=3):
+
 	kmerToReadMap = {}
 	i = 0
 	for read in superReads:
@@ -23,7 +25,7 @@ def prepareMatrix(superReads, kmerSize=3):
 			print str(i) + ' reads have been processed'
 		rowNum = read[0]
 		temp = read[1]
-		for k in range(0,len(read[1])+1-kmerSize):		
+		for k in range(0,len(read[1])+1-kmerSize):
 			key = temp[k:k+kmerSize]
 			try:
 				value = kmerToReadMap.pop(key)
@@ -34,28 +36,49 @@ def prepareMatrix(superReads, kmerSize=3):
 		i += 1
 
 	return kmerToReadMap
-	
+
+
+def sortKmerReadMap(kmerToReadMap):
+
+	kmerToReadList = [];
+	print 'entering sortKmerReadMap function' + str(datetime.now())
+	for key in kmerToReadMap.keys():
+		kmerToReadList.append([key, kmerToReadMap[key], len(kmerToReadMap[key])])
+	kmerToReadListSortedDes= sorted(kmerToReadList, key=lambda x: x[2], reverse=True)
+	print "sortKmerRead list created" + str(datetime.now())
+	newKmerToReadMap = {}
+	for i in range(0, 10):
+		print str(kmerToReadListSortedDes[i][2])
+
 fasta_sequences = SeqIO.parse(open(input_file),'fasta')
 superReads = []
+kmerSize = 101
+print 'Kmer size:' + str(kmerSize)
 i = 0
 for fasta in fasta_sequences:
-	name, sequence = fasta.id, str(fasta.seq)
-        superReads.append([i, sequence])
-	i += 1
+	if(len(str(fasta.seq)) > kmerSize):
+		name, sequence = fasta.id, str(fasta.seq)
+		superReads.append([i, sequence])
+		i = i + 1;
 #print superReads
 print 'Number of reads : ' + str(len(superReads))
 print('Going to prepare matrix')
 
+count = len(superReads[0][1])
 
-count = len(superReads[0][1]) - 5000
-print 'Kmer size is: '+str(count);
 
-kmerToReadMap = prepareMatrix(superReads,len(superReads[0][1]) - 3000)
+kmerToReadMap = prepareMatrix(superReads,kmerSize)
 
-raw_input('Going to generate Matrix')
+print 'going to generate Matrix' + str(datetime.now())
+
+#Sort the kmer-read pairs so that we consider only the most occuring kmers.
+
+sortKmerReadMap(kmerToReadMap)
+
+'''
 #print kmerToReadMap
 print('Going to generate matrix')
 matrix = generateMatrix(kmerToReadMap,superReads)
 f = open('Matrix.txt','w')
 f.write(matrix)
-
+'''
