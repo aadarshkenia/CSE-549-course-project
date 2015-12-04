@@ -38,6 +38,33 @@ def prepareMatrix(superReads, kmerSize=3):
 	return kmerToReadMap
 
 
+def mapKmerToLmer(kmerToReadMap, lmerSize):
+	print "inside mapKmerToLmer"
+	lmerToReadMap = {}
+	i = 0
+	for key in kmerToReadMap.keys():
+		if i%100000 is 0:
+			print str(i) + ' reads have been processed'
+		flag = False
+		for k in range(0, len(key) + 1 - lmerSize):
+			temp = key[k : k+lmerSize]
+			if flag:
+				if(lmer > temp):
+					lmer = temp
+			else:
+				flag = True
+				lmer = temp
+
+		try:
+			value = lmerToReadMap.pop(lmer)
+			value.append(kmerToReadMap[key])
+		except KeyError:
+			value = kmerToReadMap[key]
+		lmerToReadMap[lmer] = value
+		i += 1
+	return lmerToReadMap
+
+
 def sortKmerReadMap(kmerToReadMap):
 
 	kmerToReadList = [];
@@ -49,6 +76,7 @@ def sortKmerReadMap(kmerToReadMap):
 	newKmerToReadMap = {}
 	for i in range(0, 10):
 		print str(kmerToReadListSortedDes[i][2])
+
 
 fasta_sequences = SeqIO.parse(open(input_file),'fasta')
 superReads = []
@@ -69,11 +97,14 @@ count = len(superReads[0][1])
 
 kmerToReadMap = prepareMatrix(superReads,kmerSize)
 
-print 'going to generate Matrix' + str(datetime.now())
+print "unique kmer count: " + str(len(kmerToReadMap.keys()))
+
 
 #Sort the kmer-read pairs so that we consider only the most occuring kmers.
+#sortKmerReadMap(kmerToReadMap)
 
-sortKmerReadMap(kmerToReadMap)
+lmerToReadMap = mapKmerToLmer(kmerToReadMap, (kmerSize)/2)
+print "First unique lmer count: " + str(len(lmerToReadMap.keys()))
 
 '''
 #print kmerToReadMap
