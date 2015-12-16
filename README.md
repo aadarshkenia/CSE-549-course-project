@@ -1,5 +1,6 @@
 # CSE-549-course-project
-# Group Members: Nishanth Muruganandam(110276247), Aadarsh Kenia(109972275), Sridhar Periasami(110104782)
+
+Group Members: Nishanth Muruganandam(110276247), Aadarsh Kenia(109972275), Sridhar Periasami(110104782)
 
 Dataset:
 The dataset consists of paired-end reads where the two ends of a read are present in separate .fastq files. The dataset is a pair of fastq files:- Data_1.fastq and Data_2.fastq
