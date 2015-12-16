@@ -1,5 +1,9 @@
 from Bio import SeqIO
 from datetime import datetime
+import numpy as np
+from copy import copy, deepcopy
+from scipy import spatial
+
 input_file = 'SuperRead/superReadSequences.fasta'
 
 # This function constructs the kmer-super read matrix.
@@ -74,6 +78,62 @@ def mapKmerToLmer(kmerToReadMap, lmerSize):
 	return lmerToReadMap
 
 
+def computeSVD(X, featureCount):
+
+	print "computing SVD"
+	P, D, QT = np.linalg.svd(X, full_matrices=False)
+	P1 = copy(P[:, 0:featureCount])
+	D1 = copy(D[0:featureCount])
+	QT1 = copy(QT[0:featureCount, :])
+	superReadVectorMatrix = np.transpose(QT1)
+	return superReadVectorMatrix
+
+def computeAdjacencyList(vectorMatrix):
+
+	print "computing adjacenylist"
+
+	adjacencyList = {}
+	for i in range(0, len(vectorMatrix)):
+		if i%100 is 0:
+			print str(i) + ' k-mers have been processed'
+		for j in range(0, len(vectorMatrix)):
+			if(i != j):
+				result = 1 - spatial.distance.cosine(vectorMatrix[i], vectorMatrix[j])
+				#print result
+				if(result > 0.6):
+					if i in adjacencyList:
+						value = adjacencyList.pop(i)
+						value.append(j)
+						adjacencyList[i] = value
+					else:
+						adjacencyList[i] = [j]
+
+	return adjacencyList
+
+def clusterReads(vectorMatrix, featureCount):
+	cluster = {}
+	for i in range(0, len(vectorMatrix)):
+		if i%100 is 0:
+			print str(i) + ' reads have been clustered'
+		max = -1
+		bucketIndex = -1
+		for j in range(0, featureCount):
+			bucket = np.zeros((1, featureCount))
+			bucket[0][j] = 1
+			result = 1 - spatial.distance.cosine(bucket, vectorMatrix[i])
+			if(result > max):
+				max = result
+				bucketIndex = j
+		if bucketIndex in cluster:
+			cluster[bucketIndex] = cluster[bucketIndex] + [i]
+		else:
+			cluster[bucketIndex] = [i]
+		#print "bucket of " + str(i) + "  is :" + str(bucketIndex)
+	return cluster
+
+
+
+
 fasta_sequences = SeqIO.parse(open(input_file),'fasta')
 superReads = []
 kmerSize = 101
@@ -102,16 +162,29 @@ print "unique kmer count: " + str(len(kmerToReadMap.keys()))
 lmerToReadMap = mapKmerToLmer(kmerToReadMap, 7)
 print "First unique lmer count: " + str(len(lmerToReadMap.keys()))
 
-#lmerToReadMap = mapKmerToLmer(lmerToReadMap, (kmerSize)/4)
-#print "second unique lmer count: " + str(len(lmerToReadMap.keys()))
 
 #print lmerToReadMap
 print "matrix size will be: " + str(len(lmerToReadMap.keys()) * len(superReads))
 
 
 print('Going to generate matrix')
-#print("samle key:"  + str(lmerToReadMap.keys()[0]) + "\t sample value:" + str(lmerToReadMap.values()[0]))
+
 matrix = generateMatrix(lmerToReadMap,superReads)
 
-#f = open('Matrix.txt','w')
-#f.write(matrix)
+
+featureCount = 50
+superReadVectorMatrix = computeSVD(matrix, featureCount)
+
+cluster = clusterReads(superReadVectorMatrix, featureCount)
+#print cluster
+filename = "output-" + str(featureCount) + ".txt"
+target = open(filename, 'w')
+for i in cluster:
+  target.write("\n >>> \n %s " % cluster[i])
+target.close()
+#print superReadVectorMatrix
+#adjacencyList = computeAdjacencyList(superReadVectorMatrix)
+#print QT1
+#print vectorMatrix
+
+#print adjacencyList
