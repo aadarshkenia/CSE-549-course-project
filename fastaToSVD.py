@@ -110,41 +110,55 @@ def computeAdjacencyList(vectorMatrix):
 
 	return adjacencyList
 
-def clusterReads(vectorMatrix, featureCount):
+def createSeeds(vectorMatrix):
+	seedList = []
+	interval = len(vectorMatrix) / 1000 + 1
+	for i in range(0, len(vectorMatrix)):
+		if(i % interval == 0):
+			seedList.append(vectorMatrix[i])
+	return seedList
+
+def clusterReads(vectorMatrix, featureCount, superReadIdToNameMap):
+	seedList = createSeeds(vectorMatrix)
 	cluster = {}
 	for i in range(0, len(vectorMatrix)):
 		if i%100 is 0:
 			print str(i) + ' reads have been clustered'
 		max = -1
 		bucketIndex = -1
-		for j in range(0, featureCount):
-			bucket = np.zeros((1, featureCount))
-			bucket[0][j] = 1
-			result = 1 - spatial.distance.cosine(bucket, vectorMatrix[i])
+		for j in range(0, len(seedList)):
+			result = 1 - spatial.distance.cosine(seedList[j], vectorMatrix[i])
 			if(result > max):
 				max = result
 				bucketIndex = j
 		if bucketIndex in cluster:
-			cluster[bucketIndex] = cluster[bucketIndex] + [i]
+			#.append(superReadIdToNameMap[i])
+			value = cluster.pop(bucketIndex)
+			value.append(superReadIdToNameMap[i])
+			cluster[bucketIndex] = value
 		else:
-			cluster[bucketIndex] = [i]
+			cluster[bucketIndex] = []
+			cluster[bucketIndex].append(superReadIdToNameMap[i])
 		#print "bucket of " + str(i) + "  is :" + str(bucketIndex)
 	return cluster
-
-
-
 
 fasta_sequences = SeqIO.parse(open(input_file),'fasta')
 superReads = []
 kmerSize = 101
 print 'Kmer size:' + str(kmerSize)
 i = 0
+superReadIdToNameMap = {}
 for fasta in fasta_sequences:
 	if(len(str(fasta.seq)) > kmerSize):
 		name, sequence = fasta.id, str(fasta.seq)
 		superReads.append([i, sequence])
+		superReadIdToNameMap[i] = name
 		i = i + 1;
+
 #print superReads
+
+#print superReadIdToNameMap
+
 print 'Number of reads : ' + str(len(superReads))
 print('Going to prepare matrix')
 
@@ -175,9 +189,9 @@ matrix = generateMatrix(lmerToReadMap,superReads)
 featureCount = 50
 superReadVectorMatrix = computeSVD(matrix, featureCount)
 
-cluster = clusterReads(superReadVectorMatrix, featureCount)
+cluster = clusterReads(superReadVectorMatrix, featureCount, superReadIdToNameMap)
 #print cluster
-filename = "output-" + str(featureCount) + ".txt"
+filename = "output.txt"
 target = open(filename, 'w')
 for i in cluster:
   target.write("\n >>> \n %s " % cluster[i])
